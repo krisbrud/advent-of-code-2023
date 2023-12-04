@@ -18,6 +18,7 @@ data class Tile(
 ) {
     val isNumber = value.isDigit()
     val isSymbol = value.isSymbol()
+    val isGear = value == "*"
 }
 
 data class Number(
@@ -67,10 +68,51 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        return 0
+        val numRows = input.size
+        val numCols = input.first().length
+
+        val adjacentIndicesWithinBounds = { coord: Coordinate ->
+            val rowIndices = (max(coord.row - 1, 0)..min(coord.row + 1, numRows - 1)).toList()
+            val colIndices = (max(coord.col - 1, 0)..min(coord.col + 1, numCols - 1)).toList()
+            rowIndices.map { rowIdx ->
+                colIndices.map { colIdx ->
+                    Coordinate(rowIdx, colIdx)
+                }
+            }.flatten()
+        }
+
+        val tiles = input.mapIndexed { rowIndex, line ->
+            line.mapIndexed { colIndex, char ->
+                Tile(Coordinate(row = rowIndex, col = colIndex), value = char.toString())
+            }
+        }
+        val gearTileSet = tiles.flatten().filter(Tile::isGear).map(Tile::coordinate).toSet()
+        val gearNeighbors = mutableMapOf<Coordinate, MutableList<Int>>()
+
+        input.forEachIndexed { rowIdx, line ->
+            val allNumberMatches = NUMBER_PATTERN.findAll(line).toList().map { it.groups }.flatten().filterNotNull()
+            allNumberMatches.forEach { numberMatch ->
+                val numberCoords = numberMatch.range.map { colIdx -> Coordinate(rowIdx, colIdx) }
+                val adjacentCoords = numberCoords.map { adjacentIndicesWithinBounds(it) }.flatten()
+                val adjacentGearCoord = adjacentCoords.find { gearTileSet.contains(it) }
+                adjacentGearCoord?.also { gearCoord ->
+                    val value = numberMatch.value.toInt()
+                    when (gearNeighbors[gearCoord]) {
+                        null -> gearNeighbors[gearCoord] = mutableListOf(value)
+                        else -> gearNeighbors[gearCoord]!!.add(value)
+                    }
+                }
+//                hasAdjacentGear
+            }
+            // Refactor so that we get the position of the closest gear as well
+        }
+        val gearPairs = gearNeighbors.filter { it.value.size == 2 }
+        val gearRatioSum = gearPairs.values.sumOf { it.reduce { acc, elem -> acc * elem } }
+
+        return gearRatioSum
     }
 
-    // test if implementation meets criteria from the description, like:
+// test if implementation meets criteria from the description, like:
     val testInput = readInput("day03/Day03_test")
     check(part1(testInput) == 4361)
 //    check(part2(testInput) == 2286)
