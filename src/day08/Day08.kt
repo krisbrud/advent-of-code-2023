@@ -3,7 +3,7 @@ package day08
 import println
 import readInput
 
-class Node(
+data class Node(
     val id: String,
     val left: String,
     val right: String,
@@ -13,7 +13,7 @@ class Node(
         fun fromLine(line: String): Node {
             val id = line.slice(0..2)
             val left = line.slice(7..9)
-            val right = line.slice(11..13)
+            val right = line.slice(12..14)
             return Node(id=id, left=left, right=right)
         }
     }
@@ -27,6 +27,7 @@ class Graph private constructor(private val nodes: Map<String, Node>) {
 }
 
 fun main() {
+    val start = "AAA"
     val goal = "ZZZ"
 
     fun part1(input: List<String>): Int {
@@ -36,7 +37,7 @@ fun main() {
         val graph = Graph.fromNodeList(nodes)
 
         var i = 0
-        var current = nodes.first()
+        var current = graph.nodeOfId(start)
 
         while (current.id != goal) {
             val instruction = instructions[i % instructions.length]
@@ -47,6 +48,7 @@ fun main() {
             }
             current = graph.nodeOfId(nextId)
             i++
+//            println("i: $i")
         }
 
         return i
