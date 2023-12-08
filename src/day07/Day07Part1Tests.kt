@@ -1,5 +1,6 @@
 package day07
 
+import day07.part1.BidHand
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 

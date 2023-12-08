@@ -1,4 +1,4 @@
-package day07
+package day07.part1
 
 import println
 import readInput
@@ -85,7 +85,7 @@ data class BidHand(
     companion object {
         fun fromString(string: String): BidHand = string.split(" ").let { (handString, bidString) ->
             val bid = bidString.toInt()
-            val cards = handString.map(Card::fromChar)
+            val cards = handString.map(Card.Companion::fromChar)
             BidHand(
                 hand = Hand(cards),
                 bid = bid,
@@ -103,7 +103,7 @@ data class RankedBidHand(
 
 fun main() {
     fun part1(input: List<String>): Int {
-        val bidHands = input.map(BidHand::fromString)
+        val bidHands = input.map(BidHand.Companion::fromString)
         val rankedBidHands = bidHands.sortedBy { it.hand }.mapIndexed { index, bidHand ->
             RankedBidHand(
                 bidHand = bidHand,
