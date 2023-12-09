@@ -3,7 +3,6 @@ package day08
 import println
 import readInput
 import kotlin.math.max
-import kotlin.math.min
 
 data class Node(
     val id: String,
@@ -30,6 +29,27 @@ class Graph private constructor(private val nodes: Map<String, Node>) {
         fun fromNodeList(nodeList: List<Node>): Graph = Graph(nodeList.associateBy { it.id })
     }
 }
+
+fun Int.firstFactor(): Int? = when {
+    (this <= 1) -> null
+//    (this == 1) -> 1
+    else -> (2..this).firstOrNull { (this % it) == 0 }
+}
+
+fun Int.factorize(): List<Int> {
+    val factors = mutableListOf<Int>()
+    var rest = this
+    while ( rest.firstFactor() != rest && rest.firstFactor() != null) {
+        val firstFactor = rest.firstFactor()!!
+        rest /= firstFactor
+        factors.add(firstFactor)
+    }
+    factors.add(rest)
+    return factors.toList()
+}
+
+// factor is key, count is value
+fun Int.factorsWithCount(): Map<Int, Int> = factorize().groupingBy { it }.eachCount().toMap()
 
 fun main() {
     val start = "AAA"
@@ -61,45 +81,23 @@ fun main() {
 
     fun List<Node>.startNodes(): List<Node> = filter { it.id[2] == 'A' }
 
-    fun numIterationsNeeded(startNode: Node, graph: Graph, instructions: String): Long {
+    fun numIterationsNeeded(startNode: Node, graph: Graph, instructions: String): Int {
         println(startNode)
-        var i = 0L
+        var i = 0
         var current = startNode
 
         while (!current.isGhostGoal()) {
-            val instruction = instructions[(i % instructions.length).toInt()]
-            val nextId = when (instruction) {
+            val nextId = when (val instruction = instructions[i % instructions.length]) {
                 'L' -> current.left
                 'R' -> current.right
                 else -> throw RuntimeException("uh oh: $instruction")
             }
             current = graph.nodeOfId(nextId)
             i++
-//            println("i: $i")
         }
 
         return i
     }
-
-    fun Int.firstFactor(): Int? = when {
-        (this < 1) -> null
-        (this == 1) -> 1
-        else -> (2..this).firstOrNull { (this % it) == 0 }
-    }
-
-    fun Int.factorize(): List<Int> {
-        val factors = mutableListOf<Int>()
-        var rest = this
-        while (rest.firstFactor() != rest) {
-            val firstFactor = rest.firstFactor()
-            factors.add(firstFactor!!)
-        }
-        factors.add(rest)
-        return factors.toList()
-    }
-
-    // factor is key, count is value
-    fun Int.factorsWithCount(): Map<Int, Int> = factorize().groupingBy { it }.eachCount().toMap()
 
     fun part2(input: List<String>): Long {
         val instructions = input.first().trim()
@@ -114,19 +112,22 @@ fun main() {
             numIterationsNeeded(it.value, graph, instructions)
         }
         println("steps per node: $stepsPerNode")
-
-        return stepsPerNode.reduce { currentMinSteps, stepsForNode ->
-            val max = max(currentMinSteps, stepsForNode)
-            val min = min(currentMinSteps, stepsForNode)
-            // Calculate whether max is a multiple of min
-            val isMultiple = (max % min) == 0L
-            if (isMultiple) {
-                val multiple = max / min
-                currentMinSteps * multiple
+        val stepFactorsCounts = stepsPerNode.map { it.factorsWithCount() }
+        val minStepPrimeFactors = stepFactorsCounts.map { stepFactorsCounts: Map<Int, Int> ->
+            stepFactorsCounts.toList()
+        }.flatten().fold(mutableMapOf<Int, Int>()) { acc, (factor, occurences) ->
+            val currentMaxOccurences = acc[factor]
+            if (currentMaxOccurences == null) {
+                acc[factor] = occurences
             } else {
-                currentMinSteps * stepsForNode
+                acc[factor] = max(currentMaxOccurences, occurences)
             }
-        } // Might need to find GCD of all numbers
+            acc
+        }.toList()
+        println("step factors counts: $stepFactorsCounts")
+        println("min step prime factors: $stepFactorsCounts")
+
+        return minStepPrimeFactors.fold(1) { acc, (factor, occurrences) -> acc * factor * occurrences }
     }
 
     // test if implementation meets criteria from the description, like:
