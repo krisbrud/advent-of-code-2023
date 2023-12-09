@@ -2,6 +2,8 @@ package day08
 
 import println
 import readInput
+import kotlin.math.max
+import kotlin.math.min
 
 data class Node(
     val id: String,
@@ -79,6 +81,26 @@ fun main() {
         return i
     }
 
+    fun Int.firstFactor(): Int? = when {
+        (this < 1) -> null
+        (this == 1) -> 1
+        else -> (2..this).firstOrNull { (this % it) == 0 }
+    }
+
+    fun Int.factorize(): List<Int> {
+        val factors = mutableListOf<Int>()
+        var rest = this
+        while (rest.firstFactor() != rest) {
+            val firstFactor = rest.firstFactor()
+            factors.add(firstFactor!!)
+        }
+        factors.add(rest)
+        return factors.toList()
+    }
+
+    // factor is key, count is value
+    fun Int.factorsWithCount(): Map<Int, Int> = factorize().groupingBy { it }.eachCount().toMap()
+
     fun part2(input: List<String>): Long {
         val instructions = input.first().trim()
 
@@ -93,7 +115,18 @@ fun main() {
         }
         println("steps per node: $stepsPerNode")
 
-        return stepsPerNode.reduce { acc, l -> acc * l } // Might need to find GCD of all numbers
+        return stepsPerNode.reduce { currentMinSteps, stepsForNode ->
+            val max = max(currentMinSteps, stepsForNode)
+            val min = min(currentMinSteps, stepsForNode)
+            // Calculate whether max is a multiple of min
+            val isMultiple = (max % min) == 0L
+            if (isMultiple) {
+                val multiple = max / min
+                currentMinSteps * multiple
+            } else {
+                currentMinSteps * stepsForNode
+            }
+        } // Might need to find GCD of all numbers
     }
 
     // test if implementation meets criteria from the description, like:
