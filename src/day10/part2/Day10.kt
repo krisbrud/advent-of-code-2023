@@ -16,7 +16,7 @@ enum class Tile {
     UpRight,
     DownLeft,
     DownRight,
-    Inbetween;  // Virtual tile that is between the real tiles. Used to find out if a tile is reachable from the outside
+    VirtualGround;  // Virtual tile that is between the real tiles. Used to find out if a tile is reachable from the outside
 
     fun hasLeft() = when (this) {
         Start, Horizontal, UpLeft, DownLeft -> true
@@ -60,44 +60,41 @@ enum class Tile {
     }
 }
 
-data class Coordinate(val row: Int, val col: Int)
+data class Coordinate(val row: Int, val col: Int) {
+    fun isVirtual(): Boolean {
+        val isBetweenCols = row % 2 != 0
+        val isBetweenRows = col % 2 != 0
+        return isBetweenRows || isBetweenCols
+    }
+}
 
 data class Node(
     val coordinate: Coordinate,
     val tile: Tile,
+//    val isVirtual: Boolean,
     var prev: Node? = null,
-    var stepsFromStart: Int? = null
 ) {
     fun visited(): Boolean = prev != null
 
     fun visit(from: Node) {
         if (prev != null) return
-
-        val prevSteps = from.stepsFromStart ?: 0
-        stepsFromStart = prevSteps + 1
-
         prev = from
     }
 
     fun isStart(): Boolean = tile == Tile.Start
-
-//    fun stepsFromStart(): Int = when {
-//        isStart() -> 0
-//        prev != null -> 1 + prev!!.stepsFromStart()
-//        else -> Int.MIN_VALUE // Since we are trying to find the node with the max steps from the start node
-//    }
 }
+
+fun Int.average(other: Int): Int = (this + other) / 2
 
 class Graph(
     val cols: Int,
     val rows: Int,
     val nodes: Map<Coordinate, Node>,
 ) {
-    // Key is node, value is a list of its edges
-    val edges: Map<Coordinate, List<Node>> by lazy {
+    val edges: Map<Coordinate, List<Coordinate>> by lazy {
         nodes.toList().associate { (coordinate, node) ->
             val connectedNodes = node.connectedNodes()
-            (coordinate to connectedNodes)
+            (coordinate to connectedNodes.map(Node::coordinate))
         }
 
     }
@@ -113,6 +110,14 @@ class Graph(
         return listOfNotNull(maybeUp, maybeDown, maybeLeft, maybeRight)
     }
 
+    private fun Coordinate.virtualAdjacent(): List<Pair<Direction, Coordinate>> {
+        val maybeUp = (row - 1).takeIf { it >= -1 }?.let { Pair(Direction.Up, Coordinate(it, col)) }
+        val maybeDown = (row + 1).takeIf { it <= rows + 1 }?.let { Pair(Direction.Down, Coordinate(it, col)) }
+        val maybeLeft = (col - 1).takeIf { it >= -1 }?.let { Pair(Direction.Left, Coordinate(row, it)) }
+        val maybeRight = (col + 1).takeIf { it <= cols + 1 }?.let { Pair(Direction.Right, Coordinate(row, it)) }
+        return listOfNotNull(maybeUp, maybeDown, maybeLeft, maybeRight)
+    }
+
     private fun Node.connectedNodes(): List<Node> {
         val adjacent = coordinate.adjacent()
         val connectedNodes = adjacent.filter { (direction, otherCoordinate) ->
@@ -121,6 +126,91 @@ class Graph(
         }.mapNotNull { nodes[it.second] }
         return connectedNodes
     }
+
+    private fun virtualEdgeCoordinates(): Set<Coordinate> {
+        // Note: Virtual edge coordinates have values that are the _average_ of the source and destination of real edges
+        return edges.toList()
+            .map { (source, destinations) ->
+                destinations.map { destination -> Pair(source, destination) }
+            }.flatten().map { (source, destination) ->
+                Coordinate(
+                    row = source.row.average(destination.row),
+                    col = source.col.average(destination.col),
+                )
+            }.toSet()
+    }
+
+    private fun allVirtualCoordinates(): Set<Coordinate> {
+        return (-1..(rows + 1)).zip(-1..(cols + 1)).map { (row, col) ->
+            Coordinate(row = row, col = col)
+        }.filter(Coordinate::isVirtual).toSet()
+    }
+
+    /**
+     * Make an augmented graph by creating virtual space between tiles.
+     */
+    fun augmented(): Graph {
+        val allVirtualCoords = allVirtualCoordinates()
+        val virtualEdgeCoords = virtualEdgeCoordinates()
+        val nonEdgeVirtualCoords = allVirtualCoords - virtualEdgeCoords
+
+//        val virtualEdgeRoot = Node(Coordinate(-5,-5), Tile.VirtualGround, isVirtual = true)
+        val virtualEdgeRoot = Node(Coordinate(-5, -5), Tile.VirtualGround)
+//        virtualEdgeRoot.prev = virtualEdgeRoot // Not completely sure if this is needed
+
+        val virtualEdgeNodes = virtualEdgeCoords.map { Node(Coordinate(row = it.row, col = it.col), Tile.VirtualGround) }.also {
+            it.forEach { node ->
+                // By setting the virtual edge root as prev, this node will not be explored when we do a second BFS
+                // pass from outside the loop
+                node.prev = virtualEdgeRoot
+            }
+        }.associateBy(Node::coordinate)
+        val virtualNonEdgeNodes = nonEdgeVirtualCoords.map {
+            Node(Coordinate(row = it.row, col = it.col), Tile.VirtualGround)
+        }.associateBy(Node::coordinate)
+
+        return Graph(rows = rows, cols = cols, nodes = (nodes + virtualEdgeNodes + virtualNonEdgeNodes))
+    }
+
+    fun traverse() {
+        val startNode = nodes.values.first { it.tile == Tile.Start }.also {
+            it.prev = it // Mark it as visited
+        }
+
+        // Traverse the graph
+        val nodesToExplore = ArrayDeque(listOf(startNode))
+        while (nodesToExplore.size > 0) {
+            val node = nodesToExplore.removeFirst()
+            val nodeEdges = edges[node.coordinate]
+            nodeEdges?.forEach {
+                val edgeDestination = nodes[it]!!
+                if (!edgeDestination.visited() && !edgeDestination.isStart()) // First node has self as previous
+                {
+                    edgeDestination.visit(from = node)
+                    nodesToExplore.addLast(edgeDestination)
+                }
+            }
+        }
+    }
+
+//    fun virtualTraverse() {
+//        val startNode = nodes.find
+//
+//        // Traverse the graph
+//        val nodesToExplore = ArrayDeque(listOf(startNode))
+//        while (nodesToExplore.size > 0) {
+//            val node = nodesToExplore.removeFirst()
+//            val nodeEdges = edges[node.coordinate]
+//            nodeEdges?.forEach {
+//                val edgeDestination = nodes[it]!!
+//                if (!edgeDestination.visited() && !edgeDestination.isStart()) // First node has self as previous
+//                {
+//                    edgeDestination.visit(from = node)
+//                    nodesToExplore.addLast(edgeDestination)
+//                }
+//            }
+//        }
+//    }
 
     companion object {
         fun parse(input: List<String>): Graph {
@@ -131,7 +221,7 @@ class Graph(
                 line.mapIndexed { colIndex, char ->
                     val coordinate = Coordinate(row = rowIndex * 2, col = colIndex * 2)
                     val tile = Tile.fromChar(char)
-                    Node(coordinate, tile)
+                    Node(coordinate, tile, false)
                 }
             }.flatten().associateBy(Node::coordinate)
 
@@ -145,69 +235,20 @@ class Graph(
 }
 
 fun main() {
-    fun part1(input: List<String>): Int {
-        // TODO: Make node class that can be queried for which directions it can be connected to from
-        // TODO: Make a graph out of the possible connections in the node
-        // TODO: Traverse the graph using BFS
-        val graph = Graph.parse(input)
-        val startNode = graph.nodes.values.first { it.tile == Tile.Start }.also {
-            it.prev = it // Mark it as visited
-        }
-        startNode.stepsFromStart = 0
-
-        // Traverse the graph
-        val nodesToExplore = ArrayDeque(listOf(startNode))
-        while (nodesToExplore.size > 0) {
-            val node = nodesToExplore.removeFirst()
-            val nodeEdges = graph.edges[node.coordinate]
-            nodeEdges?.forEach {
-                if (!it.visited() && !it.isStart()) // First node has self as previous
-                {
-                    it.visit(from = node)
-                    nodesToExplore.addLast(it)
-                }
-            }
-        }
-        val stepsFromStart = graph.nodes.maxOf {
-            it.value.stepsFromStart ?: 0
-        }.also { it.println() }
-        return stepsFromStart
-    }
-
     fun part2(input: List<String>): Int {
         val graph = Graph.parse(input)
-        val startNode = graph.nodes.values.first { it.tile == Tile.Start }.also {
-            it.prev = it // Mark it as visited
-        }
-        startNode.stepsFromStart = 0
+        graph.traverse() // This gives a non-null prev-value to all non-virtual nodes in the loop
 
-        // Traverse the graph
-        val nodesToExplore = ArrayDeque(listOf(startNode))
-        while (nodesToExplore.size > 0) {
-            val node = nodesToExplore.removeFirst()
-            val nodeEdges = graph.edges[node.coordinate]
-            nodeEdges?.forEach {
-                if (!it.visited() && !it.isStart()) // First node has self as previous
-                {
-                    it.visit(from = node)
-                    nodesToExplore.addLast(it)
-                }
-            }
-        }
-        val stepsFromStart = graph.nodes.maxOf {
-            it.value.stepsFromStart ?: 0
-        }.also { it.println() }
-        return stepsFromStart
+
+        return input.size
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput1 = readInput("day10/part2/Day10_test1")
     val testInput2 = readInput("day10/part2/Day10_test2")
-    check(part1(testInput1) == 4)
-    check(part1(testInput2) == 8)
-//    check(part2(testInput) == 2)
+    check(part2(testInput1) == 2)
+    check(part2(testInput2) == 2)
 
     val input = readInput("day10/part2/Day10")
-    part1(input).println()
     part2(input).println()
 }
