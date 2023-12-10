@@ -1,4 +1,4 @@
-package day10
+package day10.part2
 
 import println
 import readInput
@@ -15,7 +15,8 @@ enum class Tile {
     UpLeft,
     UpRight,
     DownLeft,
-    DownRight;
+    DownRight,
+    Inbetween;  // Virtual tile that is between the real tiles. Used to find out if a tile is reachable from the outside
 
     fun hasLeft() = when (this) {
         Start, Horizontal, UpLeft, DownLeft -> true
@@ -105,10 +106,10 @@ class Graph(
      * Get the adjacent coordinates within bounds without regards to if they are connected or not.
      */
     private fun Coordinate.adjacent(): List<Pair<Direction, Coordinate>> {
-        val maybeUp = (row - 1).takeIf { it >= 0 }?.let { Pair(Direction.Up, Coordinate(it, col)) }
-        val maybeDown = (row + 1).takeIf { it <= rows }?.let { Pair(Direction.Down, Coordinate(it, col)) }
-        val maybeLeft = (col - 1).takeIf { it >= 0 }?.let { Pair(Direction.Left, Coordinate(row, it)) }
-        val maybeRight = (col + 1).takeIf { it <= cols }?.let { Pair(Direction.Right, Coordinate(row, it)) }
+        val maybeUp = (row - 2).takeIf { it >= 0 }?.let { Pair(Direction.Up, Coordinate(it, col)) }
+        val maybeDown = (row + 2).takeIf { it <= rows }?.let { Pair(Direction.Down, Coordinate(it, col)) }
+        val maybeLeft = (col - 2).takeIf { it >= 0 }?.let { Pair(Direction.Left, Coordinate(row, it)) }
+        val maybeRight = (col + 2).takeIf { it <= cols }?.let { Pair(Direction.Right, Coordinate(row, it)) }
         return listOfNotNull(maybeUp, maybeDown, maybeLeft, maybeRight)
     }
 
@@ -123,12 +124,12 @@ class Graph(
 
     companion object {
         fun parse(input: List<String>): Graph {
-            val cols = input.first().length
-            val rows = input.size
+            val cols = input.first().length * 2
+            val rows = input.size * 2
 
             val nodes = input.mapIndexed { rowIndex, line ->
                 line.mapIndexed { colIndex, char ->
-                    val coordinate = Coordinate(row = rowIndex, col = colIndex)
+                    val coordinate = Coordinate(row = rowIndex * 2, col = colIndex * 2)
                     val tile = Tile.fromChar(char)
                     Node(coordinate, tile)
                 }
@@ -174,17 +175,39 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        return input.size
+        val graph = Graph.parse(input)
+        val startNode = graph.nodes.values.first { it.tile == Tile.Start }.also {
+            it.prev = it // Mark it as visited
+        }
+        startNode.stepsFromStart = 0
+
+        // Traverse the graph
+        val nodesToExplore = ArrayDeque(listOf(startNode))
+        while (nodesToExplore.size > 0) {
+            val node = nodesToExplore.removeFirst()
+            val nodeEdges = graph.edges[node.coordinate]
+            nodeEdges?.forEach {
+                if (!it.visited() && !it.isStart()) // First node has self as previous
+                {
+                    it.visit(from = node)
+                    nodesToExplore.addLast(it)
+                }
+            }
+        }
+        val stepsFromStart = graph.nodes.maxOf {
+            it.value.stepsFromStart ?: 0
+        }.also { it.println() }
+        return stepsFromStart
     }
 
     // test if implementation meets criteria from the description, like:
-    val testInput1 = readInput("day10/Day10_test1")
-    val testInput2 = readInput("day10/Day10_test2")
+    val testInput1 = readInput("day10/part2/Day10_test1")
+    val testInput2 = readInput("day10/part2/Day10_test2")
     check(part1(testInput1) == 4)
     check(part1(testInput2) == 8)
 //    check(part2(testInput) == 2)
 
-    val input = readInput("day10/Day10")
+    val input = readInput("day10/part2/Day10")
     part1(input).println()
     part2(input).println()
 }
