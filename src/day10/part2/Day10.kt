@@ -112,9 +112,9 @@ class Graph(
 
     private fun Coordinate.virtualAdjacent(): List<Pair<Direction, Coordinate>> {
         val maybeUp = (row - 1).takeIf { it >= -1 }?.let { Pair(Direction.Up, Coordinate(it, col)) }
-        val maybeDown = (row + 1).takeIf { it <= rows + 1 }?.let { Pair(Direction.Down, Coordinate(it, col)) }
+        val maybeDown = (row + 1).takeIf { it <= rows - 1 }?.let { Pair(Direction.Down, Coordinate(it, col)) }
         val maybeLeft = (col - 1).takeIf { it >= -1 }?.let { Pair(Direction.Left, Coordinate(row, it)) }
-        val maybeRight = (col + 1).takeIf { it <= cols + 1 }?.let { Pair(Direction.Right, Coordinate(row, it)) }
+        val maybeRight = (col + 1).takeIf { it <= cols - 1 }?.let { Pair(Direction.Right, Coordinate(row, it)) }
         return listOfNotNull(maybeUp, maybeDown, maybeLeft, maybeRight)
     }
 
@@ -141,9 +141,11 @@ class Graph(
     }
 
     private fun allVirtualCoordinates(): Set<Coordinate> {
-        return (-1..(rows + 1)).zip(-1..(cols + 1)).map { (row, col) ->
-            Coordinate(row = row, col = col)
-        }.filter(Coordinate::isVirtual).toSet()
+        return (-1..<rows).flatMap { row ->
+            (-1..<cols).map { col ->
+                Coordinate(row = row, col = col)
+            }.filter(Coordinate::isVirtual)
+        }.toSet()
     }
 
     /**
@@ -154,9 +156,7 @@ class Graph(
         val virtualEdgeCoords = virtualEdgeCoordinates()
         val nonEdgeVirtualCoords = allVirtualCoords - virtualEdgeCoords
 
-//        val virtualEdgeRoot = Node(Coordinate(-5,-5), Tile.VirtualGround, isVirtual = true)
         val virtualEdgeRoot = Node(Coordinate(-5, -5), Tile.VirtualGround)
-//        virtualEdgeRoot.prev = virtualEdgeRoot // Not completely sure if this is needed
 
         val virtualEdgeNodes = virtualEdgeCoords.map { Node(Coordinate(row = it.row, col = it.col), Tile.VirtualGround) }.also {
             it.forEach { node ->
@@ -193,24 +193,28 @@ class Graph(
         }
     }
 
-//    fun virtualTraverse() {
-//        val startNode = nodes.find
-//
-//        // Traverse the graph
-//        val nodesToExplore = ArrayDeque(listOf(startNode))
-//        while (nodesToExplore.size > 0) {
-//            val node = nodesToExplore.removeFirst()
-//            val nodeEdges = edges[node.coordinate]
-//            nodeEdges?.forEach {
-//                val edgeDestination = nodes[it]!!
-//                if (!edgeDestination.visited() && !edgeDestination.isStart()) // First node has self as previous
-//                {
-//                    edgeDestination.visit(from = node)
-//                    nodesToExplore.addLast(edgeDestination)
-//                }
-//            }
-//        }
-//    }
+    fun virtualTraverse() {
+        // Assume that the non-augmented graph was traversed before augmenting
+        val startCoordinate = Coordinate(-1, -1)
+        val startNode = nodes.getValue(startCoordinate).also { it.prev = it }
+
+        // Traverse the graph
+        val nodesToExplore = ArrayDeque(listOf(startNode))
+        while (nodesToExplore.size > 0) {
+            val node = nodesToExplore.removeFirst()
+            val nodeEdges = node.coordinate.virtualAdjacent().map { it.second }
+            nodeEdges.forEach { edgeCoordinate ->
+                val edgeDestination = nodes[edgeCoordinate]!!
+                if (!edgeDestination.visited()
+                    && !edgeDestination.isStart()
+                    && edgeCoordinate != startCoordinate) // First node has self as previous
+                {
+                    edgeDestination.visit(from = node)
+                    nodesToExplore.addLast(edgeDestination)
+                }
+            }
+        }
+    }
 
     companion object {
         fun parse(input: List<String>): Graph {
@@ -221,7 +225,7 @@ class Graph(
                 line.mapIndexed { colIndex, char ->
                     val coordinate = Coordinate(row = rowIndex * 2, col = colIndex * 2)
                     val tile = Tile.fromChar(char)
-                    Node(coordinate, tile, false)
+                    Node(coordinate, tile)
                 }
             }.flatten().associateBy(Node::coordinate)
 
@@ -239,15 +243,25 @@ fun main() {
         val graph = Graph.parse(input)
         graph.traverse() // This gives a non-null prev-value to all non-virtual nodes in the loop
 
+        val augmentedGraph = graph.augmented()
+        augmentedGraph.virtualTraverse()
 
-        return input.size
+        val interiorPoints = augmentedGraph.nodes.values
+            .filterNot { it.coordinate.isVirtual() }
+            .filter { it.prev == null }
+//            .count()
+            .also { it.println() }
+
+        return interiorPoints.count()
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput1 = readInput("day10/part2/Day10_test1")
     val testInput2 = readInput("day10/part2/Day10_test2")
-    check(part2(testInput1) == 2)
-    check(part2(testInput2) == 2)
+    val testInput3 = readInput("day10/part2/Day10_test3")
+    check(part2(testInput1) == 4)
+    check(part2(testInput2) == 8)
+    check(part2(testInput3) == 10)
 
     val input = readInput("day10/part2/Day10")
     part2(input).println()
