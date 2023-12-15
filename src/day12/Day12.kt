@@ -38,11 +38,15 @@ fun possibleArrangements(springs: String, groups: List<Int>): Int {
     }
 
     val firstGroup = groups.first()
-    val restContainsMandatory = springs.any { it.isDamaged() }
     val canPlaceInFirstPosition = canPlaceSpringInFirstPosition(springs, firstGroup)
-    return if (canPlaceInFirstPosition && groups.size > 1) {
+    val mustPlaceInFirstPosition = springs.first().let(Spring::isDamaged)
+    return if (canPlaceInFirstPosition) {
         possibleArrangements(springs.drop(firstGroup + 1), groups.drop(1)) + // Arrangements if we place spring here
-            possibleArrangements(springs.drop(1), groups) // Arrangements if we don't place spring here
+            if (!mustPlaceInFirstPosition) {
+                possibleArrangements(springs.drop(1), groups)
+            } else {
+                0
+            } // Arrangements if we don't place spring here
 //    } else if (groups.size == 1) {
 //        if (restContainsMandatory) {
 //            val firstDamagedIndex = springs.indexOfFirst { it.isDamaged() }
@@ -62,7 +66,7 @@ fun possibleArrangements(springs: String, groups: List<Int>): Int {
 //        } else {
 //            0
 //        }
-   } else {
+    } else {
         possibleArrangements(springs.drop(1), groups) // Arrangements if we don't place spring here
     }
 }
