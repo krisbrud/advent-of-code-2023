@@ -26,6 +26,18 @@ class Day12Tests {
     }
 
     @Test
+    fun `test must place spring in first position`() {
+        assertEquals(true, mustPlaceSpringInFirstPosition("###", 2)) // Doesn't check if there is a mandatory after
+        assertEquals(true, mustPlaceSpringInFirstPosition("?#.", 2))
+        assertEquals(true, mustPlaceSpringInFirstPosition("#?.", 2))
+        assertEquals(true, mustPlaceSpringInFirstPosition("#.", 1))
+        assertEquals(false, mustPlaceSpringInFirstPosition(".#", 1))
+        assertEquals(false, mustPlaceSpringInFirstPosition(".#.", 1))
+        assertEquals(true, mustPlaceSpringInFirstPosition("##.", 1)) // Doesn't check if there is a mandatory after
+        assertEquals(true, mustPlaceSpringInFirstPosition("##.", 2))
+    }
+
+    @Test
     fun `test can place spring in first position when there are more springs left than in the group`() {
         assertEquals(true, canPlaceSpringInFirstPosition("###?", 3))
         assertEquals(true, canPlaceSpringInFirstPosition("###.", 3))
@@ -39,6 +51,7 @@ class Day12Tests {
         assertEquals(true, canPlaceSpringInFirstPosition("#?.", 2))
         assertEquals(true, canPlaceSpringInFirstPosition("??.", 2))
         assertEquals(true, canPlaceSpringInFirstPosition("?.", 1))
+        assertEquals(false, canPlaceSpringInFirstPosition(".", 1))
     }
 
     @Test
@@ -57,5 +70,34 @@ class Day12Tests {
         assertEquals(1, possibleArrangements("#???", listOf(1)))
         assertEquals(1, possibleArrangements("??#?", listOf(1)))
         assertEquals(1, possibleArrangements("???#", listOf(1)))
+        assertEquals(1, possibleArrangements("???#", listOf(2)))
+        assertEquals(0, possibleArrangements("#??#", listOf(2)))
+        assertEquals(0, possibleArrangements("#?#", listOf(2)))
+        assertEquals(1, possibleArrangements("##?", listOf(2)))
+        assertEquals(1, possibleArrangements("?##", listOf(2)))
+        assertEquals(1, possibleArrangements("?##???", listOf(2)))
+        assertEquals(1, possibleArrangements("?##?", listOf(2)))
+        assertEquals(2, possibleArrangements("?##?", listOf(3)))
+    }
+
+    @Test
+    fun `test possibleArrangements when there is two groups left`() {
+        assertEquals(3, possibleArrangements("????", listOf(1, 1)))
+        assertEquals(1, possibleArrangements("????", listOf(1, 2)))
+        assertEquals(0, possibleArrangements("????", listOf(2, 2)))
+        assertEquals(0, possibleArrangements("??#?", listOf(2, 1)))
+        assertEquals(1, possibleArrangements("??#??", listOf(2, 1)))
+        assertEquals(1, possibleArrangements("?#?#", listOf(2, 1)))
+//        assertEquals(1, possibleArrangements("#???", listOf(1)))
+//        assertEquals(1, possibleArrangements("??#?", listOf(1)))
+//        assertEquals(1, possibleArrangements("???#", listOf(1)))
+//        assertEquals(1, possibleArrangements("???#", listOf(2)))
+//        assertEquals(0, possibleArrangements("#??#", listOf(2)))
+//        assertEquals(0, possibleArrangements("#?#", listOf(2)))
+//        assertEquals(1, possibleArrangements("##?", listOf(2)))
+//        assertEquals(1, possibleArrangements("?##", listOf(2)))
+//        assertEquals(1, possibleArrangements("?##???", listOf(2)))
+//        assertEquals(1, possibleArrangements("?##?", listOf(2)))
+//        assertEquals(2, possibleArrangements("?##?", listOf(3)))
     }
 }
