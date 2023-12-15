@@ -1,4 +1,4 @@
-package day11
+package day11.part1
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
