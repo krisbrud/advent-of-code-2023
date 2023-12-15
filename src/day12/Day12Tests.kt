@@ -2,7 +2,6 @@ package day12
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertAll
 
 class Day12Tests {
     val line1 = "???.### 1,1,3"
@@ -44,13 +43,19 @@ class Day12Tests {
 
     @Test
     fun `test lines should have correct number of possible configurations`() {
-        assertAll(
-            { assertEquals(1, line1.arrangements())},
-            { assertEquals(4, line2.arrangements())},
-            { assertEquals(1, line3.arrangements())},
-            { assertEquals(1, line4.arrangements())},
-            { assertEquals(4, line5.arrangements())},
-            { assertEquals(10, line6.arrangements())},
-        )
+        assertEquals(1, line1.arrangements())
+        assertEquals(4, line2.arrangements())
+        assertEquals(1, line3.arrangements())
+        assertEquals(1, line4.arrangements())
+        assertEquals(4, line5.arrangements())
+        assertEquals(10, line6.arrangements())
+    }
+
+    @Test
+    fun `test possibleArrangements when there is one group left`() {
+        assertEquals(4, possibleArrangements("????", listOf(1)))
+        assertEquals(1, possibleArrangements("#???", listOf(1)))
+        assertEquals(1, possibleArrangements("??#?", listOf(1)))
+        assertEquals(1, possibleArrangements("???#", listOf(1)))
     }
 }
