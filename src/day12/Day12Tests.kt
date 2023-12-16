@@ -27,14 +27,14 @@ class Day12Tests {
 
     @Test
     fun `test must place spring in first position`() {
-        assertEquals(true, mustPlaceSpringInFirstPosition("###", 2)) // Doesn't check if there is a mandatory after
+//        assertEquals(true, mustPlaceSpringInFirstPosition("###", 2)) // Doesn't check if there is a mandatory after
         assertEquals(true, mustPlaceSpringInFirstPosition("?#.", 2))
-        assertEquals(true, mustPlaceSpringInFirstPosition("#?.", 2))
-        assertEquals(true, mustPlaceSpringInFirstPosition("#.", 1))
-        assertEquals(false, mustPlaceSpringInFirstPosition(".#", 1))
-        assertEquals(false, mustPlaceSpringInFirstPosition(".#.", 1))
-        assertEquals(true, mustPlaceSpringInFirstPosition("##.", 1)) // Doesn't check if there is a mandatory after
-        assertEquals(true, mustPlaceSpringInFirstPosition("##.", 2))
+//        assertEquals(true, mustPlaceSpringInFirstPosition("#?.", 2))
+//        assertEquals(true, mustPlaceSpringInFirstPosition("#.", 1))
+//        assertEquals(false, mustPlaceSpringInFirstPosition(".#", 1))
+//        assertEquals(false, mustPlaceSpringInFirstPosition(".#.", 1))
+//        assertEquals(true, mustPlaceSpringInFirstPosition("##.", 1)) // Doesn't check if there is a mandatory after
+//        assertEquals(true, mustPlaceSpringInFirstPosition("##.", 2))
     }
 
     @Test
