@@ -2,7 +2,6 @@ package day14
 
 import println
 import readInput
-import kotlin.time.measureTime
 
 fun Char.isRoundedRock(): Boolean = this == 'O'
 fun Char.isSupportBeam(): Boolean = this == '#'
@@ -74,31 +73,50 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        val testIterations = 1000
-        val duration = measureTime {
-            var tmp = input
-            var i = 0
+        val seenStates = mutableSetOf<String>()
+        val totalIterations = 1000000000L
 
-            while (i < testIterations) {
-                tmp = tmp.cycle()
-                i += 1
+        var tmp = input
+        var i = 0
+        var firstCycle: String? = null
+        var firstStateRepetitionIteration: Long? = null
+        var secondStateRepetitionIteration: Long? = null
+
+        // Dirty (but decently performant) solution - find the first and second time the cycle repeats (i.e. the second and third time they occur)
+        // and use some simple modulo math to iterate just the needed iterations within the cycle after the second
+        // occurence for the result to be equivalent to doing all the iterations
+        while (i < 10000) {
+            val stringState = tmp.joinToString("")
+            if (seenStates.contains(stringState)) {
+                if (firstCycle == null) {
+                    firstCycle = stringState
+                    firstStateRepetitionIteration = i.toLong()
+                    println("First cycle at iteration $i")
+                } else if (stringState == firstCycle) {
+                    println("Further hit of cycle at iteration $i")
+                    secondStateRepetitionIteration = i.toLong()
+                    break
+                }
             }
+            seenStates.add(stringState)
+            tmp = tmp.cycle()
+            i += 1
         }
-        println("Duration: $duration")
-        val durationPerCycle = duration / testIterations
-        println("Duration per cycle: $durationPerCycle")
+        val cycleLength = secondStateRepetitionIteration!! - firstStateRepetitionIteration!!
+        val remainingIterations = (totalIterations - i) % cycleLength
+        for (j in 0 until remainingIterations.toInt()) {
+            tmp = tmp.cycle()
+        }
 
-        val totalIterations = 1000000000
-        val estimatedTotalDuration = durationPerCycle * 1000000000
-        println("Estimated total duration: $estimatedTotalDuration")
+        val load = tmp.calculateLoad()
 
-        return input.size
+        return load
     }
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("day14/Day14_test")
-//    check(part1(testInput) == 136)
-//    check(part2(testInput) == 400)
+    check(part1(testInput) == 136)
+    check(part2(testInput) == 64)
 
     val input = readInput("day14/Day14")
     part1(input).println()
