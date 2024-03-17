@@ -34,40 +34,46 @@ fun isRestImpossible(springs: String, groups: List<Int>): Boolean {
     return springs.length < (spaces + groups.sum())
 }
 
-fun possibleArrangements(springs: String, groups: List<Int>): Int {
+fun possibleArrangements(springs: String, groups: List<Int>): Long {
     if (springs.isEmpty()) {
-        return if (groups.isEmpty()) 1 else 0
+        return if (groups.isEmpty()) 1L else 0L
     }
     if (groups.isEmpty()) {
-        return if (springs.none { it.isDamaged() }) 1 else 0
+        return if (springs.none { it.isDamaged() }) 1L else 0L
     }
-    if (isRestImpossible(springs, groups)) return 0
+    if (isRestImpossible(springs, groups)) return 0L
 
     val firstGroup = groups.first()
     val canPlaceInFirstPosition = canPlaceSpringInFirstPosition(springs, firstGroup)
     val mustPlaceInFirstPosition = mustPlaceSpringInFirstPosition(springs, firstGroup)
     return if (canPlaceInFirstPosition) {
-        possibleArrangements(springs.drop(firstGroup + 1), groups.drop(1)) + // Arrangements if we place spring here
+        memoizedPossibleArrangements(springs.drop(firstGroup + 1), groups.drop(1)) + // Arrangements if we place spring here
             if (!mustPlaceInFirstPosition) {
-                possibleArrangements(springs.drop(1), groups)
+               memoizedPossibleArrangements(springs.drop(1), groups)
             } else {
-                0
+                0L
             } // Arrangements if we don't place spring here
     } else if (mustPlaceInFirstPosition) {
-        0
+        0L
     } else {
-        possibleArrangements(springs.drop(1), groups) // Arrangements if we don't place spring here
+        memoizedPossibleArrangements(springs.drop(1), groups) // Arrangements if we don't place spring here
     }
 }
 
-
-fun String.arrangements(): Int {
-    val (springs, groupsString) = trim().split(" ")
-    val groups = groupsString.split(",").map { it.trim().toInt() }
-    return possibleArrangements(springs, groups)
+val cache = mutableMapOf<String, Long>()
+fun memoizedPossibleArrangements(springs: String, groups: List<Int>): Long {
+    val key = "$springs;${groups.joinToString(",")}"
+    return cache.getOrPut(key) { possibleArrangements(springs, groups) }
 }
 
-fun String.unfoldedArrangements(): Int {
+
+fun String.arrangements(): Long {
+    val (springs, groupsString) = trim().split(" ")
+    val groups = groupsString.split(",").map { it.trim().toInt() }
+    return memoizedPossibleArrangements(springs, groups)
+}
+
+fun String.unfoldedArrangements(): Long {
     val (springs, groupsString) = trim().split(" ")
     val groups = groupsString.split(",").map { it.trim().toInt() }
     return possibleArrangements("$springs?$springs?$springs?$springs?$springs",
@@ -76,7 +82,7 @@ fun String.unfoldedArrangements(): Int {
 }
 
 fun main() {
-    fun part1(input: List<String>): Int {
+    fun part1(input: List<String>): Long {
         val possibleArrangementSum = input.sumOf { it.arrangements() }
 
         return possibleArrangementSum
@@ -84,7 +90,7 @@ fun main() {
 
     fun part2(input: List<String>): Long {
         val arrangements = input.withIndex().map {
-            println("Index: ${it.index}")
+//            println("Index: ${it.index}")
             it.value.unfoldedArrangements().toLong()
         }
 
@@ -93,8 +99,8 @@ fun main() {
 
     // test if implementation meets criteria from the description, like:
     val testInput = readInput("day12/Day12_test")
-    check(part1(testInput) == 21)
-//    check(part2(testInput) == 525152)
+    check(part1(testInput) == 21L)
+    check(part2(testInput) == 525152L)
 
     val input = readInput("day12/Day12")
 //    val input2 = readInput("day12/Day12_modified")
